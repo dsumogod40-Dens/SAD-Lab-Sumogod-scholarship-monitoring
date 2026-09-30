@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scholarship Monitoring System</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--acc:#008a4b;--dk:#006b3a;--lt:#dff3e8;--yl:#f5b400;--bg:#f2f4f8;--ink:#28323a;--mut:#6b7780;--line:#e1e6ea;--ok:#008a4b;--bad:#c0392b;--warn:#b7791f}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 'Roboto',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+button,select,input{font:inherit}
+#app{display:flex;min-height:100vh}
+#side{width:250px;background:#fff;border-right:1px solid var(--line);flex-shrink:0}
+.brand{display:flex;align-items:center;gap:10px;padding:12px 16px;font-weight:700;letter-spacing:1px;color:var(--dk);font-size:13px;line-height:1.2}
+.brand img{height:40px;width:auto}
+.me{display:flex;gap:10px;align-items:center;background:var(--lt);padding:14px 16px}
+.av{width:44px;height:44px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:18px}
+.me b{display:block;color:var(--dk)}.me small{color:var(--acc);text-transform:capitalize}
+.sec{padding:14px 16px 6px;font-size:12px;color:var(--mut);font-weight:500}
+#nav{display:flex;flex-direction:column}
+#nav button{background:none;border:0;border-left:4px solid transparent;text-align:left;padding:11px 16px;color:var(--ink);cursor:pointer}
+#nav button::before{content:"";display:inline-block;width:8px;height:8px;background:var(--yl);border-radius:2px;margin-right:12px}
+#nav button:hover{background:var(--bg)}
+#nav button.on{background:var(--lt);border-left-color:var(--acc);font-weight:700;color:var(--dk)}
+#pane{flex:1;min-width:0}
+.top{background:var(--acc);color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px;border-bottom:4px solid var(--yl)}
+.top h1{flex:1;margin:0;font-size:22px;font-weight:500}
+#burger{display:none;background:none;border:0;color:var(--yl);font-size:24px;cursor:pointer}
+#logout{background:var(--yl);color:#3d2f00;border:0;border-radius:3px;padding:6px 14px;font-weight:700;cursor:pointer}
+main{padding:20px 24px;max-width:1100px}
+.card{background:#fff;border:1px solid var(--line);border-radius:4px;padding:18px;margin-bottom:18px}
+h2{margin:0 0 12px;font-size:16px;font-weight:500;color:var(--dk);border-bottom:1px solid var(--line);padding-bottom:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--line);border-bottom:3px solid var(--acc);padding:16px;border-radius:4px;display:flex;flex-direction:column;gap:4px;color:var(--mut)}
+.stat b{font-size:32px;font-weight:500;color:var(--ink)}
+.stat.ok{border-bottom-color:var(--ok)}.stat.ok b{color:var(--ok)}
+.stat.bad{border-bottom-color:var(--bad)}.stat.bad b{color:var(--bad)}
+.stat.warn{border-bottom-color:var(--yl)}.stat.warn b{color:var(--warn)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:4px}
+input,select{padding:8px 10px;border:1px solid #cfd8dc;border-radius:3px;background:#fff;color:var(--ink)}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.btn{background:var(--acc);color:#fff;border:0;padding:9px 16px;border-radius:3px;cursor:pointer;font-weight:500}
+.btn:hover{background:var(--dk)}
+.btn.sm{padding:4px 10px;font-size:12px}.btn.alt{background:#fff;color:var(--acc);border:1px solid var(--acc)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--lt);color:var(--dk);font-weight:500}
+tr:hover td{background:#fafcfb}
+.tag{padding:2px 9px;border-radius:10px;font-size:12px;font-weight:500;background:#e8edf0}
+.tag.ok{background:#d6f0e2;color:var(--ok)}.tag.bad{background:#f8dcd8;color:var(--bad)}.tag.warn{background:#fdefc8;color:var(--warn)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+#msg{position:fixed;bottom:16px;right:16px;padding:10px 16px;border-radius:4px;color:#fff;display:none;max-width:320px;z-index:9}
+#msg.ok{background:var(--ok)}#msg.bad{background:var(--bad)}
+#login{max-width:380px;margin:9vh auto;text-align:center;border-top:4px solid var(--acc)}
+#login img{height:72px;margin-bottom:8px}
+#login form{grid-template-columns:1fr;text-align:left}
+.hide{display:none!important}
+.note{color:var(--mut);font-size:13px}
+@media(max-width:800px){#side{position:fixed;inset:0 auto 0 0;z-index:5;transform:translateX(-100%);transition:transform .2s}#side.open{transform:none;box-shadow:0 0 20px #0004}#burger{display:block}main{padding:14px}}
+@media(prefers-reduced-motion:reduce){#side{transition:none}}
+</style>
+</head>
+<body>
+<section id="login" class="card hide">
+  <img src="logo.png" alt="" onerror="this.style.display='none'">
+  <h2>Scholarship Monitoring System</h2>
+  <p class="note">Sign in as admin, staff, or scholar</p>
+  <form id="loginForm">
+    <label>Email<input id="email" type="email" required></label>
+    <label>Password<input id="password" type="password" required></label>
+    <button class="btn">Log in</button>
+  </form>
+</section>
+
+<div id="app" class="hide">
+<aside id="side">
+  <div class="brand"><img src="logo.png" alt="" onerror="this.style.display='none'"><span>SCHOLARSHIP<br>MONITORING</span></div>
+  <div class="me"><div class="av" id="av">?</div><div><b id="meName"></b><small id="who"></small></div></div>
+  <div class="sec">MAIN NAVIGATION</div>
+  <nav id="nav">
+    <button data-v="dash">Dashboard</button>
+    <button data-v="scholars">Scholars</button>
+    <button data-v="programs">Scholarship Programs</button>
+    <button data-v="subs">Grade Submissions</button>
+  </nav>
+</aside>
+<div id="pane">
+<div class="top"><button id="burger" aria-label="Menu">&#9776;</button><h1 id="ttl">Dashboard</h1><button id="logout">Logout</button></div>
+<main>
+<section id="dash" class="view">
+  <div class="stats" id="stats"></div>
+  <p class="note">Compliance rule: a semester is Compliant when GWA is at or below the program's required GWA (1.00 is highest), enrolled units meet the minimum, and failed subjects are zero unless the program allows failing grades.</p>
+</section>
+
+<section id="scholars" class="view hide">
+  <div class="card"><h2 id="sTitle">Register scholar</h2>
+    <form id="sForm">
+      <input type="hidden" id="sId">
+      <label>Student ID<input id="sSid"></label>
+      <label>Full name<input id="sName" required></label>
+      <label>Degree program<input id="sDeg"></label>
+      <label>Year level<input id="sYear" type="number" min="1" max="6" value="1"></label>
+      <label>Scholarship program<select id="sProg"></select></label>
+      <label>Status<select id="sStat"></select></label>
+      <button class="btn">Save scholar</button>
+      <button type="button" class="btn alt" id="sReset">Clear form</button>
+    </form>
+  </div>
+  <div class="card"><h2>Scholar records</h2>
+    <div class="bar">
+      <input id="q" placeholder="Search Student ID or name">
+      <select id="fProg"></select><select id="fStat"></select>
+    </div>
+    <div class="tw"><table id="sTable"></table></div>
+  </div>
+</section>
+
+<section id="programs" class="view hide">
+  <div class="card"><h2>Add scholarship program</h2>
+    <form id="pForm">
+      <label>Program name<input id="pName" required></label>
+      <label>Required GWA (maximum)<input id="pGwa" type="number" step="0.01" min="1" max="5" required></label>
+      <label>Minimum units<input id="pUnits" type="number" min="0" required></label>
+      <label>Failing grade allowed<select id="pFail"><option value="false">No</option><option value="true">Yes</option></select></label>
+      <button class="btn">Save program</button>
+    </form>
+  </div>
+  <div class="card"><h2>Programs and requirements</h2><div class="tw"><table id="pTable"></table></div></div>
+</section>
+
+<section id="subs" class="view hide">
+  <div id="mine" class="card hide"></div>
+  <div class="card"><h2>Submit semester grades</h2>
+    <form id="gForm">
+      <label>Scholar<select id="gSch"></select></label>
+      <label>Academic year<input id="gAy" placeholder="2025-2026" required></label>
+      <label>Semester<select id="gSem"><option>1st</option><option>2nd</option><option>Summer</option></select></label>
+      <label>GWA<input id="gGwa" type="number" step="0.01" required></label>
+      <label>Units enrolled<input id="gUnits" type="number" required></label>
+      <label>Failed subjects<input id="gFail" type="number" value="0"></label>
+      <label>Incomplete subjects<input id="gInc" type="number" value="0"></label>
+      <button class="btn">Submit grades</button>
+    </form>
+  </div>
+  <div class="card"><h2>Submissions</h2><div class="tw"><table id="gTable"></table></div></div>
+</section>
+</main>
+</div>
+</div>
+<div id="msg"></div>
+
+<script>
+// ====== PASTE YOUR SUPABASE KEY HERE ======
+const SUPABASE_URL = 'https://wazzdekdxohxbiirkjwh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_eDqzoocyGwXbpv5meVfRfw_JaPyglRo';
+// ==========================================
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const STATUSES = ['Active','Pending Submission','For Verification','Compliant','With Deficiency','Probationary','For Renewal','Renewed','Disqualified'];
+let user = null, role = null, programs = [], scholars = [], subs = [];
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function msg(t, ok = true) { const m = $('msg'); m.textContent = t; m.className = ok ? 'ok' : 'bad'; m.style.display = 'block'; setTimeout(() => m.style.display = 'none', 4500); }
+function tag(s) { const c = s === 'Compliant' || s === 'Verified' ? 'ok' : s === 'With Deficiency' || s === 'Returned' ? 'bad' : s === 'Pending' || s === 'For Verification' ? 'warn' : ''; return `<span class="tag ${c}">${esc(s || '-')}</span>`; }
+function view(v) { document.querySelectorAll('.view').forEach(e => e.classList.toggle('hide', e.id !== v)); document.querySelectorAll('#nav [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === v)); $('ttl').textContent = document.querySelector('#nav [data-v="' + v + '"]').textContent; $('side').classList.remove('open'); if (v === 'dash') loadStats(); }
+
+// ---------- AUTH ----------
+async function enter(u) {
+  const { data: p } = await sb.from('profiles').select('role,full_name').eq('id', u.id).single();
+  if (!p) { await sb.auth.signOut(); $('app').classList.add('hide'); $('login').classList.remove('hide'); return msg('Access denied. No profile found for this account.', false); }
+  user = u; role = p.role; $('login').classList.add('hide'); $('app').classList.remove('hide');
+  $('who').textContent = role; $('meName').textContent = p.full_name || u.email; $('av').textContent = (p.full_name || u.email)[0].toUpperCase();
+  document.querySelectorAll('#nav [data-v]').forEach(b => b.classList.toggle('hide', role === 'scholar' && ['dash', 'scholars'].includes(b.dataset.v)));
+  $('pForm').closest('.card').classList.toggle('hide', role !== 'admin');
+  await loadAll(); view(role === 'scholar' ? 'subs' : 'dash');
+}
+$('loginForm').onsubmit = async e => {
+  e.preventDefault();
+  const { data, error } = await sb.auth.signInWithPassword({ email: $('email').value, password: $('password').value });
+  if (error) return msg('Login failed: ' + error.message, false);
+  enter(data.user);
+};
+$('burger').onclick = () => $('side').classList.toggle('open');
+$('logout').onclick = async () => { await sb.auth.signOut(); user = null; $('app').classList.add('hide'); $('login').classList.remove('hide'); };
+document.querySelectorAll('#nav [data-v]').forEach(b => b.onclick = () => view(b.dataset.v));
+
+// ---------- LOAD ----------
+async function loadAll() {
+  const [p, s, g] = await Promise.all([
+    sb.from('scholarship_programs').select('*').order('program_name'),
+    sb.from('scholars').select('*').order('full_name'),
+    sb.from('grade_submissions').select('*').order('submitted_at', { ascending: false })]);
+  programs = p.data || []; scholars = s.data || []; subs = g.data || [];
+  fillSelects(); renderScholars(); renderPrograms(); renderSubs();
+}
+const prog = id => programs.find(p => p.id === id);
+const sch = id => scholars.find(s => s.id === id);
+function fillSelects() {
+  const po = programs.map(p => `<option value="${p.id}">${esc(p.program_name)}</option>`).join('');
+  $('sProg').innerHTML = '<option value="">Select program</option>' + po;
+  $('fProg').innerHTML = '<option value="">All programs</option>' + po;
+  $('sStat').innerHTML = STATUSES.map(s => `<option>${s}</option>`).join('');
+  $('fStat').innerHTML = '<option value="">All statuses</option>' + STATUSES.map(s => `<option>${s}</option>`).join('');
+  $('gSch').innerHTML = scholars.map(s => `<option value="${s.id}">${esc(s.student_id)} - ${esc(s.full_name)}</option>`).join('');
+}
+
+// ---------- DASHBOARD ----------
+async function loadStats() {
+  const cnt = async (t, f) => { let q = sb.from(t).select('*', { count: 'exact', head: true }); if (f) q = f(q); return (await q).count ?? 0; };
+  const [a, b, c, d, e] = await Promise.all([
+    cnt('scholars'), cnt('grade_submissions', q => q.eq('submission_status', 'Pending')),
+    cnt('grade_submissions', q => q.eq('submission_status', 'Verified')),
+    cnt('scholars', q => q.eq('status', 'Compliant')), cnt('scholars', q => q.eq('status', 'With Deficiency'))]);
+  $('stats').innerHTML = [['Total Scholars', a, ''], ['Pending Grade Submissions', b, 'warn'], ['Verified Submissions', c, ''], ['Compliant Scholars', d, 'ok'], ['With Deficiency', e, 'bad']]
+    .map(x => `<div class="stat ${x[2]}"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+}
+
+// ---------- SCHOLARS ----------
+function renderScholars() {
+  const q = $('q').value.trim().toLowerCase(), fp = $('fProg').value, fs = $('fStat').value;
+  const rows = scholars.filter(s => (!q || s.student_id.toLowerCase().includes(q) || s.full_name.toLowerCase().includes(q)) && (!fp || s.scholarship_id === fp) && (!fs || s.status === fs));
+  $('sTable').innerHTML = '<tr><th>Student ID</th><th>Name</th><th>Degree</th><th>Year</th><th>Program</th><th>Status</th><th></th></tr>' +
+    (rows.map(s => `<tr><td>${esc(s.student_id)}</td><td>${esc(s.full_name)}</td><td>${esc(s.degree_program)}</td><td>${s.year_level ?? ''}</td><td>${esc(prog(s.scholarship_id)?.program_name)}</td><td>${tag(s.status)}</td><td><button class="btn sm alt" onclick="editScholar('${s.id}')">Edit</button></td></tr>`).join('') || '<tr><td colspan="7">No scholars match. Register one above.</td></tr>');
+}
+['q', 'fProg', 'fStat'].forEach(i => $(i).oninput = renderScholars);
+window.editScholar = id => { const s = sch(id); $('sTitle').textContent = 'Edit scholar'; $('sId').value = s.id; $('sSid').value = s.student_id; $('sName').value = s.full_name; $('sDeg').value = s.degree_program || ''; $('sYear').value = s.year_level || 1; $('sProg').value = s.scholarship_id; $('sStat').value = s.status; window.scrollTo(0, 0); };
+$('sReset').onclick = () => { $('sForm').reset(); $('sId').value = ''; $('sTitle').textContent = 'Register scholar'; };
+$('sForm').onsubmit = async e => {
+  e.preventDefault();
+  if (!$('sSid').value.trim()) return msg('Student ID cannot be blank.', false);
+  if (!$('sProg').value) return msg('Select a scholarship program.', false);
+  const row = { student_id: $('sSid').value.trim(), full_name: $('sName').value.trim(), degree_program: $('sDeg').value.trim(), year_level: +$('sYear').value, scholarship_id: $('sProg').value, status: $('sStat').value };
+  const id = $('sId').value;
+  const { error } = id ? await sb.from('scholars').update(row).eq('id', id) : await sb.from('scholars').insert(row);
+  if (error) return msg(error.code === '23505' ? 'Student ID already exists.' : error.message, false);
+  msg('Scholar saved.'); $('sReset').click(); await loadAll();
+};
+
+// ---------- PROGRAMS ----------
+function renderPrograms() {
+  $('pTable').innerHTML = '<tr><th>Program</th><th>Required GWA (max)</th><th>Min units</th><th>Failing allowed</th><th>Active</th></tr>' +
+    programs.map(p => `<tr><td>${esc(p.program_name)}</td><td>${p.required_gwa}</td><td>${p.min_units}</td><td>${p.allow_failing_grade ? 'Yes' : 'No'}</td><td>${p.active ? 'Yes' : 'No'}</td></tr>`).join('');
+}
+$('pForm').onsubmit = async e => {
+  e.preventDefault();
+  const { error } = await sb.from('scholarship_programs').insert({ program_name: $('pName').value.trim(), required_gwa: +$('pGwa').value, min_units: +$('pUnits').value, allow_failing_grade: $('pFail').value === 'true' });
+  if (error) return msg(error.message, false);
+  msg('Program saved.'); $('pForm').reset(); await loadAll();
+};
+
+// ---------- GRADE SUBMISSIONS ----------
+function renderSubs() {
+  const m = $('mine'), me = scholars[0];
+  m.classList.toggle('hide', role !== 'scholar' || !me);
+  if (role === 'scholar' && me) m.innerHTML = `<h2>My scholarship</h2><p>${esc(me.full_name)} (${esc(me.student_id)}) - ${esc(prog(me.scholarship_id)?.program_name)} ${tag(me.status)}</p>`;
+  $('gTable').innerHTML = '<tr><th>Scholar</th><th>AY</th><th>Sem</th><th>GWA</th><th>Units</th><th>Failed</th><th>Incomplete</th><th>Status</th><th>Result</th><th></th></tr>' +
+    (subs.map(g => `<tr><td>${esc(sch(g.scholar_id)?.full_name)}</td><td>${esc(g.academic_year)}</td><td>${esc(g.semester)}</td><td>${g.gwa}</td><td>${g.units_enrolled}</td><td>${g.failed_subjects}</td><td>${g.incomplete_subjects}</td><td>${tag(g.submission_status)}</td><td>${g.evaluation_result ? tag(g.evaluation_result) : '-'}</td><td>${g.submission_status === 'Pending' && role !== 'scholar' ? `<button class="btn sm" onclick="verify('${g.id}')">Verify</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="10">No submissions yet.</td></tr>');
+}
+$('gForm').onsubmit = async e => {
+  e.preventDefault();
+  const gwa = +$('gGwa').value, units = +$('gUnits').value, f = +$('gFail').value, i = +$('gInc').value;
+  if (!$('gSch').value) return msg('Select a scholar.', false);
+  if (gwa < 1 || gwa > 5) return msg('GWA must be between 1.00 and 5.00.', false);
+  if (units < 0) return msg('Units cannot be negative.', false);
+  if (f < 0 || i < 0) return msg('Failed and incomplete counts cannot be negative.', false);
+  const { error } = await sb.from('grade_submissions').insert({ scholar_id: $('gSch').value, academic_year: $('gAy').value.trim(), semester: $('gSem').value, gwa, units_enrolled: units, failed_subjects: f, incomplete_subjects: i, submission_status: 'Pending' });
+  if (error) return msg(error.code === '23505' ? 'This scholar already has a submission for that year and semester.' : error.message, false);
+  msg('Grades submitted. Status: Pending.'); $('gForm').reset(); await loadAll();
+};
+
+// ---------- VERIFY + COMPLIANCE ----------
+function evaluate(g, p) {
+  return g.gwa <= p.required_gwa && g.units_enrolled >= p.min_units && (p.allow_failing_grade || g.failed_subjects === 0) ? 'Compliant' : 'With Deficiency';
+}
+window.verify = async id => {
+  const g = subs.find(x => x.id === id);
+  if (g.submission_status !== 'Pending') return msg('Already verified.', false);
+  const p = prog(sch(g.scholar_id).scholarship_id), result = evaluate(g, p);
+  const { error } = await sb.from('grade_submissions').update({ submission_status: 'Verified', verified_by: user.id, verified_at: new Date().toISOString(), evaluation_result: result }).eq('id', id).eq('submission_status', 'Pending');
+  if (error) return msg(error.message, false);
+  await sb.from('scholars').update({ status: result }).eq('id', g.scholar_id);
+  msg('Verified. Result: ' + result, result === 'Compliant'); await loadAll();
+};
+
+// ---------- START ----------
+(async () => { const { data: { session } } = await sb.auth.getSession(); if (session) enter(session.user); else $('login').classList.remove('hide'); })();
+</script>
+</body>
+</html>
